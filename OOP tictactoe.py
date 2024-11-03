@@ -1,3 +1,5 @@
+from functools import cmp_to_key
+from random import randint
 
 class Board:
     def __init__(self,size):
@@ -16,6 +18,36 @@ class Board:
         #     [" "," "," "],
         #     [" "," "," "],      # the basic board
         # ]
+#1:
+        self.winning_sets = []
+        # add winning rows and columns:
+        winning_diagonal = []
+        winning_other_diagonal = []
+        for i in range(self.size):
+            # print("i",i)
+            winning_row = []
+            winning_col = []
+            
+            for j in range(self.size):
+                # print("j",j)
+                winning_row.append([i,j])
+                winning_col.append([j,i])
+                if i == j:
+                    winning_diagonal.append([i,j])
+                if i == (self.size - 1) - j:
+                    winning_other_diagonal.append([i,j])
+                #print("winning_row",winning_row)
+                #print("winning col",winning_col)
+                # print("winning_diagonal",winning_diagonal)
+                # print("other diagonal",winning_other_diagonal)
+            self.winning_sets.append(winning_row)
+            self.winning_sets.append(winning_col)
+        self.winning_sets.append(winning_diagonal)
+        self.winning_sets.append(winning_other_diagonal)
+
+        # for s in self.winning_sets:
+        #     print (s)
+
     def check_for_win(self):
         for columnrow in range(self.size): 
             # check for a full column
@@ -76,6 +108,51 @@ class Board:
                 self.board[row][col] = symbol
                 return "successful"
             return "invalid"
+    def best_next_move(self):
+        #   find the best possible move for the player and return it
+        # 1. determine all possible winning sets of coordinates on the board
+        # 2. sort sets by how full they are (descending)
+        # 3. pick random one from fullest set
+
+        
+
+        #2:
+        def compare(a,b):
+            # compare 2 sets to see which has more symbols
+            # go through a, counting coordinates with symbols in
+            # print("a",a)
+            counta = 0
+            for coordinate in a:
+                if self.board[coordinate[0]][coordinate[1]] != " ":
+                    counta += 1
+            # print("counta",counta)
+
+            # print("b",b)
+            countb = 0
+            for coordinate in b:
+                if self.board[coordinate[0]][coordinate[1]] != " ":
+                    countb += 1
+            # print("countb",countb)
+
+            return counta - countb
+        sorted_sets = sorted(self.winning_sets,key=cmp_to_key(compare))
+        sorted_sets.reverse()
+
+        # for s in sorted_sets:
+        #     print(s)
+            
+        # find first set that is not full
+        for winning_set in sorted_sets:
+            # print("winning_set",winning_set)
+            emptycoords = []
+            for coordinate in winning_set:
+                if self.board[coordinate[0]][coordinate[1]] == " ":
+                    emptycoords.append(coordinate)
+            # print("count",len(emptycoords))
+            if len(emptycoords):
+                # print(winning_set)
+                return emptycoords[randint(0,(len(emptycoords)-1))]
+
 
 class Player:
     def __init__(self,symbol,number):
@@ -110,8 +187,10 @@ class Game:
             print(self.board.render())
             print(f"it is player {player_playing.number}'s turn")              # display whos turn it is
 
-            play_row = int(input("what row would you like to play:      "))-1  # player chooses where they want to play
-            play_col = int(input("what column would you like to play:   "))-1
+            best_coordinate = self.board.best_next_move()
+
+            play_row = int(input(f"what row would you like to play (best:{best_coordinate[0]+1}):      "))-1  # player chooses where they want to play
+            play_col = int(input(f"what column would you like to play (best:{best_coordinate[1]+1}):   "))-1
 
             if self.board.move(play_row,play_col,player_playing.symbol) == "successful":
                 if self.board.check_for_win() == "over":          # check if the game is finished
@@ -162,3 +241,4 @@ while True:
 
     round += 1
     print()
+
