@@ -48,7 +48,7 @@ class Board:
         # for s in self.winning_sets:
         #     print (s)
 
-    def check_for_win(self):
+    def check_for_end(self):
         for columnrow in range(self.size): 
             # check for a full column
             # if the current column in the first row is a symbol, check if any rows have a different symbol. if they do, carry on the game. if they dont, end the game
@@ -58,7 +58,7 @@ class Board:
                     if self.board[row][columnrow] != self.board[0][columnrow]:
                         same = False
                 if same:
-                    return("over")
+                    return("win")
                 
             # check for a full row
             # if the current row in the first column is a symbol, check if any columns have a different symbol. if they do, carry on the game, if they dont, end the game
@@ -68,7 +68,7 @@ class Board:
                     if self.board[columnrow][column] != self.board[columnrow][0]:
                         same = False
                 if same:
-                    return("over")                
+                    return("win")                
             
         # check for \ diagonal
         # if first column in first row is a symbol, check if respective rows in respective columns are not equal. if they arent equal, carry on the game, if not end it
@@ -78,7 +78,7 @@ class Board:
                 if self.board[columnrow][columnrow] != self.board[0][0]:
                     same = False
             if same:
-                return("over")
+                return("win")
         
         # check for / diagonal
         # if last column in first row is a symbol, check if respective rows in previous columns are not equal. if they arent equal, carry on the game, if not end it
@@ -89,15 +89,25 @@ class Board:
                 if self.board[columnrow][self.size - columnrow - 1] != self.board[0][self.size-1]:
                     same = False
             if same:
-                return("over")
+                return("win")
             
-        return ("on")
+        # check if there are still valid moves remaining
+        for row in self.board:
+            for col in row:
+                if col == " ":
+                    return ("on")
+                
+        # no more moves and no winner means the game must be a tie  
+        return ("tie")
+    
+
     def render(self):
         output = ""
         for row in self.board:
             output += (f"{row}\n")
         #return(f"{self.board[0]}\n{self.board[1]}\n{self.board[2]}")                # display the current board before every round
         return(output)
+    
     def move(self,row,col,symbol):
             if row > (self.size)-1 or col > (self.size)-1 or col < 0 or row < 0:      # prevent errors:
                 print(col,row)
@@ -163,10 +173,12 @@ class Player:
         self.score += 1
     
 class Game:
-    def __init__(self,player1,player2,size):
+    def __init__(self,player1,player2,size,bot1,bot2):
         self.board = Board(size)
         self.player1 = player1
         self.player2 = player2
+        self.bot1 = bot1
+        self.bot2 = bot2
         # print(self.player1)
         # print(self.player1.symbol)
         # print(self.player2)
@@ -180,25 +192,40 @@ class Game:
         game = "on"
         round = 1
         while game == "on":
+            bot = False
             if round % 2 == 1:
                 player_playing = self.player1
+                if self.bot1 == "y":
+                    bot = True
             else:
                 player_playing = self.player2
+                if self.bot2 == "y":
+                    bot = True
+
             print(self.board.render())
             print(f"it is player {player_playing.number}'s turn")              # display whos turn it is
 
             best_coordinate = self.board.best_next_move()
 
-            play_row = int(input(f"what row would you like to play (best:{best_coordinate[0]+1}):      "))-1  # player chooses where they want to play
-            play_col = int(input(f"what column would you like to play (best:{best_coordinate[1]+1}):   "))-1
+            if bot == True:
+                play_row = best_coordinate[0]
+                play_col = best_coordinate[1]
+            else:
+                play_row = int(input(f"what row would you like to play (best:{best_coordinate[0]+1}):      "))-1  # player chooses where they want to play
+                play_col = int(input(f"what column would you like to play (best:{best_coordinate[1]+1}):   "))-1
 
             if self.board.move(play_row,play_col,player_playing.symbol) == "successful":
-                if self.board.check_for_win() == "over":          # check if the game is finished
+                if self.board.check_for_end() == "win":          # check if the game is finished
                     print(self.board.render())
                     print(f"game over, player{player_playing.number} wins the game")
                     game = "over"
                     player_playing.win()
 
+                elif self.board.check_for_end() == "tie":
+                    print(self.board.render())
+                    print("game over, it was a tie")
+                    game = "over"
+                    # score stays the same
                 else:
                     print("game carries on\n")
                     round += 1
@@ -213,6 +240,22 @@ def winning_score(rounds):
 round = 1
 rounds = int(input("How many rounds do you want to play?:   "))
 size = int(input("How big would you like the board to be?:  "))
+
+bot1_input_invalid = True
+bot2_input_invalid = True
+while bot1_input_invalid == True:
+    bot1 = input("Is player1 a bot? (y/n):       ")
+    if bot1 == "y" or bot1 == "n":
+        bot1_input_invalid = False
+    else:
+        print("Incorrect input please try again,")
+while bot2_input_invalid == True:
+    bot2 = input("Is player2 a bot? (y/n):       ")
+    if bot2 == "y" or bot2 == "n":
+        bot2_input_invalid = False
+    else:
+        print("Incorrect input please try again,")
+
 # print(winning_score(3))
 # print(winning_score(4))
 # print(winning_score(5))
@@ -225,7 +268,7 @@ size = int(input("How big would you like the board to be?:  "))
 
 while True:
     print(f"Round {round}")
-    game = Game(player1,player2,size)
+    game = Game(player1,player2,size,bot1,bot2)
     game.play()
     print("player1",player1.score,"player2",player2.score)
     if player1.score == winning_score(rounds):
