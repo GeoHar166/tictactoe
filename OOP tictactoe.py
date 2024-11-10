@@ -48,6 +48,31 @@ class Board:
         # for s in self.winning_sets:
         #     print (s)
 
+        # create array of sets sorted by their emptiness
+        def compare(a,b):
+            # compare 2 sets to see which has more symbols
+            # go through a, counting coordinates with symbols in
+            # print("a",a)
+            counta = 0
+            for coordinate in a:
+                if self.board[coordinate[0]][coordinate[1]] != " ":
+                    counta += 1
+            # print("counta",counta)
+
+            # print("b",b)
+            countb = 0
+            for coordinate in b:
+                if self.board[coordinate[0]][coordinate[1]] != " ":
+                    countb += 1
+            # print("countb",countb)
+
+            return counta - countb
+        self.sorted_sets_by_emptiness = sorted(self.winning_sets,key=cmp_to_key(compare))
+        self.sorted_sets_by_emptiness.reverse()
+        # for s in sorted_sets:
+        #     print(s)
+
+
     def check_for_end(self):
         for columnrow in range(self.size): 
             # check for a full column
@@ -85,7 +110,7 @@ class Board:
         if self.board[0][self.size-1].isalpha():
             same = True
             for columnrow in range(self.size):
-                print(self.size - columnrow - 1)
+                #print(self.size - columnrow - 1)
                 if self.board[columnrow][self.size - columnrow - 1] != self.board[0][self.size-1]:
                     same = False
             if same:
@@ -100,7 +125,6 @@ class Board:
         # no more moves and no winner means the game must be a tie  
         return ("tie")
     
-
     def render(self):
         output = ""
         for row in self.board:
@@ -118,41 +142,18 @@ class Board:
                 self.board[row][col] = symbol
                 return "successful"
             return "invalid"
-    def best_next_move(self):
+    
+    def best_next_move1(self):
         #   find the best possible move for the player and return it
         # 1. determine all possible winning sets of coordinates on the board
         # 2. sort sets by how full they are (descending)
         # 3. pick random one from fullest set
-
-        
-
-        #2:
-        def compare(a,b):
-            # compare 2 sets to see which has more symbols
-            # go through a, counting coordinates with symbols in
-            # print("a",a)
-            counta = 0
-            for coordinate in a:
-                if self.board[coordinate[0]][coordinate[1]] != " ":
-                    counta += 1
-            # print("counta",counta)
-
-            # print("b",b)
-            countb = 0
-            for coordinate in b:
-                if self.board[coordinate[0]][coordinate[1]] != " ":
-                    countb += 1
-            # print("countb",countb)
-
-            return counta - countb
-        sorted_sets = sorted(self.winning_sets,key=cmp_to_key(compare))
-        sorted_sets.reverse()
-
-        # for s in sorted_sets:
-        #     print(s)
+ 
+        return self._rand_empty_coordinate(self.sorted_sets_by_emptiness)
             
-        # find first set that is not full
-        for winning_set in sorted_sets:
+    def _rand_empty_coordinate(self,sets):
+        # find a random empty coordinate in the first set
+        for winning_set in sets:
             # print("winning_set",winning_set)
             emptycoords = []
             for coordinate in winning_set:
@@ -162,23 +163,53 @@ class Board:
             if len(emptycoords):
                 # print(winning_set)
                 return emptycoords[randint(0,(len(emptycoords)-1))]
+        print("SHOULD NOT GET HERE")
+        exit()
+            
 
+    def best_next_move2(self,player):
+        #   find the best possible move for the player and return it
+        # 1. determine all possible winning sets of coordinates on the board
+        # 2. sort sets by how full they are (descending)
+        # 3. remove any with opponent symbol
+        # 4. if there are no left do best_next_move1
+        # 5. pick random one from fullest set
+        sorted_sets_by_emptiness_no_opposition = []
+        for winning_set in self.sorted_sets_by_emptiness:
+            opposition = False
+            for coordinate in winning_set:
+                if self.board[coordinate[0]][coordinate[1]] != " " and self.board[coordinate[0]][coordinate[1]] != player.symbol:
+                    opposition = True
+            if not opposition:
+                sorted_sets_by_emptiness_no_opposition.append(winning_set)
+        # print("sorted sets by emptiness no opposition",sorted_sets_by_emptiness_no_opposition)
 
+        if len(sorted_sets_by_emptiness_no_opposition) == 0:
+            return self.best_next_move1()
+        
+        return self._rand_empty_coordinate(sorted_sets_by_emptiness_no_opposition)
+        
+                
 class Player:
     def __init__(self,symbol,number):
         self.symbol = symbol
         self.number = number
         self.score = 0
+
     def win(self):
         self.score += 1
+
+class Bot(Player):
+    def __init__(self, symbol, number):
+        super().__init__(symbol, number)
+
+    
     
 class Game:
-    def __init__(self,player1,player2,size,bot1,bot2):
+    def __init__(self,player1,player2,size):
         self.board = Board(size)
         self.player1 = player1
         self.player2 = player2
-        self.bot1 = bot1
-        self.bot2 = bot2
         # print(self.player1)
         # print(self.player1.symbol)
         # print(self.player2)
@@ -192,22 +223,20 @@ class Game:
         game = "on"
         round = 1
         while game == "on":
-            bot = False
             if round % 2 == 1:
                 player_playing = self.player1
-                if self.bot1 == "y":
-                    bot = True
             else:
                 player_playing = self.player2
-                if self.bot2 == "y":
-                    bot = True
 
-            print(self.board.render())
+            #print(self.board.render())
             print(f"it is player {player_playing.number}'s turn")              # display whos turn it is
 
-            best_coordinate = self.board.best_next_move()
+            if player_playing.algorithm == 1:
+                best_coordinate = self.board.best_next_move1()
+            elif player_playing.algorithm == 2:
+                best_coordinate = self.board.best_next_move2(player_playing)
 
-            if bot == True:
+            if isinstance(player_playing,Bot):
                 play_row = best_coordinate[0]
                 play_col = best_coordinate[1]
             else:
@@ -225,13 +254,14 @@ class Game:
                     print(self.board.render())
                     print("game over, it was a tie")
                     game = "over"
-                    # score stays the same
+                    # both players get a point
+                    self.player1.win()
+                    self.player2.win()
                 else:
                     print("game carries on\n")
                     round += 1
                 
-player1 = Player("x",1)
-player2 = Player("o",2)
+
 # game.play()
 
 def winning_score(rounds):
@@ -255,6 +285,38 @@ while bot2_input_invalid == True:
         bot2_input_invalid = False
     else:
         print("Incorrect input please try again,")
+    
+if bot1 == "y":
+    player1 = Bot("x",1)
+    print("Player 1 Algorithms:")
+    print("1 - random empty space in fullest row")
+    print("2 - random empty space in fullest row with no opposition symbols")
+    algorithm = int(input("Which algorithm for the bot would you like to use?   "))
+    validalgorithm = False
+    while not validalgorithm:
+        if algorithm in [1,2]:
+            player1.algorithm = algorithm
+            validalgorithm = True
+        else:   
+            print("invalid algorithm choice, try again")
+else:
+    player1 = Player("x",1)
+
+if bot2 == "y":
+    player2 = Bot("o",2)
+    print("Player 2 Algorithms:")
+    print("1 - random empty space in fullest row")
+    print("2 - random empty space in fullest row with no opposition symbols")
+    algorithm = int(input("Which algorithm for the bot would you like to use?   "))
+    validalgorithm = False
+    while not validalgorithm:
+        if algorithm in [1,2]:
+            player2.algorithm = algorithm
+            validalgorithm = True
+        else:   
+            print("invalid algorithm choice, try again")
+else:
+    player2 = Player("o",2)
 
 # print(winning_score(3))
 # print(winning_score(4))
@@ -268,7 +330,7 @@ while bot2_input_invalid == True:
 
 while True:
     print(f"Round {round}")
-    game = Game(player1,player2,size,bot1,bot2)
+    game = Game(player1,player2,size)
     game.play()
     print("player1",player1.score,"player2",player2.score)
     if player1.score == winning_score(rounds):
