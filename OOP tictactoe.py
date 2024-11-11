@@ -228,13 +228,15 @@ class Game:
             else:
                 player_playing = self.player2
 
-            #print(self.board.render())
+            print(self.board.render())
             print(f"it is player {player_playing.number}'s turn")              # display whos turn it is
 
             if player_playing.algorithm == 1:
                 best_coordinate = self.board.best_next_move1()
             elif player_playing.algorithm == 2:
                 best_coordinate = self.board.best_next_move2(player_playing)
+            else:
+                best_coordinate = self.board.best_next_move1()
 
             if isinstance(player_playing,Bot):
                 play_row = best_coordinate[0]
@@ -301,6 +303,7 @@ if bot1 == "y":
             print("invalid algorithm choice, try again")
 else:
     player1 = Player("x",1)
+    player1.algorithm = 0
 
 if bot2 == "y":
     player2 = Bot("o",2)
@@ -317,6 +320,7 @@ if bot2 == "y":
             print("invalid algorithm choice, try again")
 else:
     player2 = Player("o",2)
+    player2.algorithm = 0
 
 # print(winning_score(3))
 # print(winning_score(4))
